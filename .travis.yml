@@ -1,0 +1,77 @@
+os: linux
+dist: precise
+sudo: false
+language: c
+compiler: gcc
+git: { depth: 3 }
+
+env:
+  - DIR=src-rt KERN=K26 TARGET=v2z V1=AT-RT-N5x V2=-3.4p-138 FILE=tomato-Netgear-3500Lv2-K26USB-1.28.$V1$V2-AIO.chk
+  - DIR=src-rt KERN=K26 TARGET=v2e V1=AT-RT-N5x V2=-3.4p-138 FILE=tomato-Netgear-3500Lv2-K26USB-1.28.$V1$V2-VPN.chk
+
+addons:
+  apt:
+    packages:
+    - autoconf
+    - autogen
+    - automake
+    - autopoint
+    - binutils
+    - bison
+    - build-essential
+    - bzip2
+    - flex
+    - g++
+    - gawk
+    - gcc
+    - gcc-multilib
+    - gettext
+    - gperf
+    - intltool
+    - lib32stdc++6
+    - lib32z1-dev
+    - libc6
+    - libcurl4-openssl-dev
+    - libelf1:i386
+    - libevent-dev
+    - libglib2.0-dev
+    - libncurses5
+    - libncurses5-dev
+    - libnfnetlink0
+    - libssl-dev
+    - libstdc++5
+    - libtool
+    - libxml2-dev
+    - m4
+    - make
+    - mtd-utils
+    - net-tools
+    - patch
+    - pkg-config
+    - xsltproc
+    - zlib1g-dev
+
+install: curl -sSLO https://raw.githubusercontent.com/slodki/travis-wait-log/master/travis_wait_log
+         && chmod +x travis_wait_log
+
+before_script:
+  - mkdir -p ~/opt && ln -s $TRAVIS_BUILD_DIR/tools/brcm ~/opt/brcm
+  - ln -sf ~/opt/brcm/$KERN/hndtools-mipsel-uclibc-4.2.4 ~/opt/brcm/hndtools-mipsel-linux
+  - ln -sf ~/opt/brcm/$KERN/hndtools-mipsel-uclibc-4.2.4 ~/opt/brcm/hndtools-mipsel-uclibc
+  - export PATH=$PATH:~/opt/brcm/hndtools-mipsel-linux/bin:~/opt/brcm/hndtools-mipsel-uclibc/bin
+
+script: cd "release/$DIR" && $TRAVIS_BUILD_DIR/travis_wait_log make "$TARGET" V1="$V1" V2="$V2"
+after_script: ls -l "$TRAVIS_BUILD_DIR/release/$DIR/image"
+before_deploy: mv /tmp/travis_wait.log "/tmp/$FILE.log" && gzip -9 "/tmp/$FILE.log"
+
+deploy:
+  provider: releases
+  api_key:
+    secure: "aVhx5OAWdla/97Rrv7mXTGYTZO/QPp2GJs6qhwu+SQC2so2C9JQryUwAPLpy5tHhDv+ruWW7sO5RBasWPiWtw1sEyxrHcyXaE5y1NFiscwcZmjvw5shjNkWHl5cZ2axZVrs647LPSveBnXDGBO5HhYZEd8g0lTIIsTUedsw98D06QiHjFT5cCudDobypKmqJ3tzrcnQgSe7zBONZBEdmQ3UMkl3zMP6zMM/kTGl/8EFhJ70myY6o53J0QTx9g9CXJLQ+JT4QGEBUxdQ+W7jdnRNUt2vaYjl0pPJL5dFgY/HgtdeaZDLhpSrZB27XLT3JHubOKfd9qi5YhLGJWwFzYIO59SnqqqRamUFB6aW+S/tmwF1UKMggAPkEZqKoNrrhNLQW9Q/7HAWJ1P185tvavG7eO/pDss/uPjRIvQcBxpss876kBjTsO1kUjFc670FxW75XkNxXrHiAKmO8mkDpYqy5XD7sD7CiWa3WA9xRj7hE8fRur1AhYUUebhSDd/l42V4i0hxrOEDRE62O3pzqBaM/s/E2cCB5tlYIfkHEzMQIxn1XoUxGhvtUNsuiMp1zewqCoyLaxzC+VfuiNMwp0HePO0VsOmv5Nrn0p8VG42frwEEZV+nBrcSaZlSdcfJBsDWggjxf01ujgeDvZ9pkAbjkJjS3N2M5EoCKDg4wdxk="
+  file:
+    - "$TRAVIS_BUILD_DIR/release/$DIR/image/$FILE"
+    - "/tmp/$FILE.log.gz"
+  skip_cleanup: true
+  overwrite: true
+  on:
+    tags: true
